@@ -1,34 +1,28 @@
-/**
- * ESTA É A CLASSE QUE VIOLA TODOS OS PRINCÍPIOS SOLID
- */
 class ProcessadorDePedidos {
-    // Violação do DIP: Depende diretamente da implementação concreta
-    private MySQLRepositorio repositorio = new MySQLRepositorio();
+    private final CalculadoraDeTotal calculadora;
+    private final Map<String, PagamentoStrategy> metodosPagamento;
+    private final RepositorioPedido repositorio;
+    private final ServicoEmail servicoEmail;
 
-    // Violação do SRP: Esta classe faz tudo
+    public ProcessadorDePedidos(
+            CalculadoraDeTotal calculadora,
+            Map<String, PagamentoStrategy> metodosPagamento,
+            RepositorioPedido repositorio,
+            ServicoEmail servicoEmail) {
+        this.calculadora = calculadora;
+        this.metodosPagamento = metodosPagamento;
+        this.repositorio = repositorio;
+        this.servicoEmail = servicoEmail;
+    }
+
     public void processar(Pedido pedido) {
-        // 1. Responsabilidade: Calcular o total
-        double total = 0;
-        for (Item item : pedido.getItens()) {
-            total += item.getPreco();
-        }
+        double total = calculadora.calcularTotal(pedido);
         System.out.println("Total do pedido: " + total);
 
-        // 2. Responsabilidade: Processar o pagamento
-        // Violação do OCP: Aberto para modificação quando um novo pagamento surgir
-        if (pedido.getTipoPagamento().equals("cartao")) {
-            System.out.println("Processando pagamento via Cartão de Crédito...");
-            // Lógica específica para cartão
-        } else if (pedido.getTipoPagamento().equals("boleto")) {
-            System.out.println("Processando pagamento via Boleto Bancário...");
-            // Lógica específica para boleto
-        }
-
-        // 3. Responsabilidade: Salvar no banco
+        PagamentoStrategy pagamento = metodosPagamento.get(pedido.getTipoPagamento());
+        pagamento.processarPagamento(pedido, total);
+        
         repositorio.salvar(pedido);
-
-        // 4. Responsabilidade: Enviar e-mail
-        System.out.println("Enviando e-mail de confirmação...");
-        // Lógica de envio de e-mail
+        servicoEmail.enviarConfirmacao(pedido);
     }
 }
